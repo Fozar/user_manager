@@ -1,60 +1,30 @@
 <template>
     <div>
-        <GroupsNavbar @submit-create="submitCreate"/>
+        <GroupsNavbar/>
         <GroupsTable v-bind:groups="groups" @delete-group="submitDelete" @edit-group="editGroup"
                      @manage-group="manageGroup" ref="groupsTable"/>
 
-        <b-modal id="edit-group" centered title="Edit Group" @ok.prevent="submitEdit()" @hidden="resetGroupForm">
-            <form ref="editGroupForm">
-                <b-form-group label="Name" label-for="name-input" invalid-feedback="Name is required">
-                    <b-form-input id="name-input" v-model="group.name" :state="validateGroupState('name')"
-                                  required type="text" name="name"/>
-                </b-form-group>
-            </form>
-        </b-modal>
+        <NewGroupModal @add-group-to-table="addGroupToTable" ref="newGroupModal"/>
 
-        <b-modal id="manage-group" centered title="Manage Group" @ok.prevent="submitManage()" @hidden="resetManageForm">
-            <form ref="manageGroupForm">
-                <b-form-group label="Role" label-for="role-input">
-                    <multiselect id="role-input" v-model="selectedRole" track-by="name" label="name"
-                                 placeholder="Manage Role" :options="roles"/>
-                </b-form-group>
-                <b-form-group label="Users" label-for="users-input">
-                    <multiselect id="users-input" v-model="selectedUsers" :options="users" :multiple="true"
-                                 :close-on-select="false" :clear-on-select="false" :preserve-search="true"
-                                 placeholder="Manage Users" label="login" track-by="login" :preselect-first="true">
-                        <template slot="selection" slot-scope="{ values, search, isOpen }">
-                            <span class="multiselect__single" v-if="values.length &amp;&amp; !isOpen">
-                                {{ values.length }} users selected
-                            </span>
-                        </template>
-                    </multiselect>
-                </b-form-group>
-            </form>
-        </b-modal>
+        <EditGroupModal @update-group-in-table="updateGroupInTable" ref="editGroupModal"/>
+
+        <ManageGroupModal ref="manageGroupModal"/>
     </div>
 </template>
 
 <script>
-    import GroupsNavbar from "../components/GroupsNavbar";
-    import GroupsTable from "../components/GroupsTable";
-    import {groupApiMixin} from "../mixins/group-api";
-    import {userApiMixin} from "../mixins/user-api";
-    import {roleApiMixin} from "../mixins/role-api";
-    import {groupValidationMixin} from "../mixins/group-validation";
+    import GroupsNavbar from "../components/navbars/GroupsNavbar";
+    import GroupsTable from "../components/tables/GroupsTable";
+    import {groupApiMixin} from "../mixins/api/group-api";
+    import NewGroupModal from "../components/modals/NewGroupModal";
+    import EditGroupModal from "../components/modals/EditGroupModal";
+    import ManageGroupModal from "../components/modals/ManageGroupModal";
 
     export default {
         name: "Groups",
-        mixins: [groupApiMixin, userApiMixin, roleApiMixin, groupValidationMixin],
-        data() {
-            return {
-                group: {},
-                selectedUsers: [],
-                selectedRole: null,
-            }
-        },
+        mixins: [groupApiMixin],
         components: {
-            GroupsNavbar, GroupsTable
+            GroupsNavbar, GroupsTable, NewGroupModal, EditGroupModal, ManageGroupModal
         },
         created() {
             document.title = "User Manager - Groups";
@@ -63,26 +33,11 @@
             });
         },
         methods: {
-            resetManageForm() {
-                this.group = {}
-            },
             editGroup(group) {
-                this.group = {...group};
-                this.$bvModal.show("edit-group")
+                this.$refs.editGroupModal.editGroup(group)
             },
             manageGroup(group) {
-                this.group = group;
-                this.getGroupMetadata(group.id).then(response => {
-                    this.selectedUsers = response.data.users;
-                    this.selectedRole = response.data.role
-                });
-                this.getUsers().then(response => {
-                    this.users = response.data
-                });
-                this.getRoles().then(response => {
-                    this.roles = response.data
-                });
-                this.$bvModal.show("manage-group")
+                this.$refs.manageGroupModal.manageGroup(group)
             },
             submitDelete(group) {
                 if (!confirm("Are you sure?"))
@@ -106,70 +61,13 @@
                     }
                 })
             },
-            submitEdit() {
-                this.$v.group.$touch();
-                if (this.$v.group.$anyError) {
-                    return;
-                }
-                this.updateGroup(this.group).then(response => {
-                    if (response.status === 200) {
-                        this.group = {};
-                        let groupIndex = this.groups.findIndex(group => group.id === response.data.id);
-                        this.groups[groupIndex] = response.data;
-                        this.$refs.groupsTable.refreshTable();
-                        this.$nextTick(() => {
-                            this.$bvModal.hide('edit-group')
-                        });
-                        this.$bvToast.toast(`Group ${response.data.name} updated`, {
-                            title: 'Group updated',
-                            autoHideDelay: 5000,
-                            variant: "dark"
-                        })
-                    } else {
-                        this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
-                            title: 'Error',
-                            autoHideDelay: 5000,
-                            variant: "danger"
-                        })
-                    }
-                })
+            addGroupToTable(group) {
+                this.groups.push(group)
             },
-            submitManage() {
-                let users = this.selectedUsers.map(user => user.id);
-                let role = ((this.selectedRole instanceof Object) ? this.selectedRole.id : null);
-                console.log(users);
-                console.log(role);
-                this.updateGroupMetadata(this.group.id, {"role": role, "users": users}).then(response => {
-                    if (response.status === 200) {
-                        this.$nextTick(() => {
-                            this.$bvModal.hide('manage-group')
-                        });
-                        this.$bvToast.toast(`Group ${this.group.name} updated`, {
-                            title: 'Group updated',
-                            autoHideDelay: 5000,
-                            variant: "dark"
-                        });
-                        this.group = {};
-                    } else {
-                        this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
-                            title: 'Error',
-                            autoHideDelay: 5000,
-                            variant: "danger"
-                        })
-                    }
-                })
-            },
-            submitCreate(group) {
-                this.createGroup(group).then(response => {
-                    // Push to groups array
-                    this.groups.push(response.data);
-                    // Show notification
-                    this.$bvToast.toast(`Group ${response.data.name} added`, {
-                        title: 'Group added',
-                        autoHideDelay: 5000,
-                        variant: "dark"
-                    })
-                });
+            updateGroupInTable(group) {
+                let groupIndex = this.groups.findIndex(_group => _group.id === group.id);
+                this.groups[groupIndex] = group;
+                this.$refs.groupsTable.refreshTable();
             }
         }
     }

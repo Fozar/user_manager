@@ -10,6 +10,7 @@
     <li>Bootstrap Vue</li>
     <li>FortAwesome/vue-fontawesome</li>
     <li>Vue-multiselect</li>
+    <li>Vuelidate</li>
     <li>Axios</li>
 </ul>
 <h3>Backend Technologies Stack</h3>
@@ -25,6 +26,7 @@
     <li>Flask-RESTful</li>
     <li>Flask-SQLAlchemy</li>
     <li>Flask-WTF</li>
+    <li>Flask-Bcrypt</li>
 </ul>
 
 # client

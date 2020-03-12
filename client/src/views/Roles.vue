@@ -1,67 +1,28 @@
 <template>
     <div>
-        <RolesNavbar @submit-create="submitCreate"/>
+        <RolesNavbar/>
         <RolesTable v-bind:roles="roles" @delete-role="submitDelete" @edit-role="editRole"
                     @manage-role="manageRole" ref="rolesTable"/>
 
-        <b-modal id="edit-role" centered title="Edit Role" @ok.prevent="submitEdit()" @hidden="resetRoleForm">
-            <form ref="editRoleForm">
-                <b-form-group label="Name" label-for="name-input" invalid-feedback="Name is required">
-                    <b-form-input id="name-input" v-model="role.name" :state="validateRoleState('name')"
-                                  required type="text" name="name"/>
-                </b-form-group>
-            </form>
-        </b-modal>
-
-        <b-modal id="manage-role" centered title="Manage Role" @ok.prevent="submitManage()" @hidden="resetManageForm">
-            <form ref="manageRoleForm">
-                <b-form-group label="Groups" label-for="groups-input">
-                    <multiselect id="groups-input" v-model="selectedGroups" :options="groups" :multiple="true"
-                                 :close-on-select="false" :clear-on-select="false" :preserve-search="true"
-                                 placeholder="Manage Groups" label="name" track-by="name" :preselect-first="true">
-                        <template slot="selection" slot-scope="{ values, search, isOpen }">
-                            <span class="multiselect__single" v-if="values.length &amp;&amp; !isOpen">
-                                {{ values.length }} groups selected
-                            </span>
-                        </template>
-                    </multiselect>
-                </b-form-group>
-                <b-form-group label="Users" label-for="users-input">
-                    <multiselect id="users-input" v-model="selectedUsers" :options="users" :multiple="true"
-                                 :close-on-select="false" :clear-on-select="false" :preserve-search="true"
-                                 placeholder="Manage Users" label="login" track-by="login" :preselect-first="true">
-                        <template slot="selection" slot-scope="{ values, search, isOpen }">
-                            <span class="multiselect__single" v-if="values.length &amp;&amp; !isOpen">
-                                {{ values.length }} users selected
-                            </span>
-                        </template>
-                    </multiselect>
-                </b-form-group>
-            </form>
-        </b-modal>
+        <NewRoleModal @add-role-to-table="addRoleToTable" ref="newRoleModal"/>
+        <EditRoleModal @update-role-in-table="updateRoleInTable" ref="editRoleModal"/>
+        <ManageRoleModal ref="manageRoleModal"/>
     </div>
 </template>
 
 <script>
-    import {roleApiMixin} from "../mixins/role-api";
-    import RolesNavbar from "../components/RolesNavbar";
-    import RolesTable from "../components/RolesTable";
-    import {groupApiMixin} from "../mixins/group-api";
-    import {userApiMixin} from "../mixins/user-api";
-    import {roleValidationMixin} from "../mixins/role-validation";
+    import {roleApiMixin} from "../mixins/api/role-api";
+    import RolesNavbar from "../components/navbars/RolesNavbar";
+    import RolesTable from "../components/tables/RolesTable";
+    import NewRoleModal from "../components/modals/NewRoleModal";
+    import EditRoleModal from "../components/modals/EditRoleModal";
+    import ManageRoleModal from "../components/modals/ManageRoleModal";
 
     export default {
         name: "Roles",
-        mixins: [roleApiMixin, groupApiMixin, userApiMixin, roleValidationMixin],
-        data() {
-            return {
-                role: {},
-                selectedGroups: [],
-                selectedUsers: [],
-            }
-        },
+        mixins: [roleApiMixin],
         components: {
-            RolesNavbar, RolesTable
+            RolesNavbar, RolesTable, NewRoleModal, EditRoleModal, ManageRoleModal
         },
         created() {
             document.title = "User Manager - Roles";
@@ -70,26 +31,11 @@
             });
         },
         methods: {
-            resetManageForm() {
-                this.role = {}
-            },
             editRole(role) {
-                this.role = {...role};
-                this.$bvModal.show("edit-role")
+                this.$refs.editRoleModal.editRole(role)
             },
             manageRole(role) {
-                this.role = role;
-                this.getRoleMetadata(role.id).then(response => {
-                    this.selectedUsers = response.data.users;
-                    this.selectedGroups = response.data.groups
-                });
-                this.getUsers().then(response => {
-                    this.users = response.data
-                });
-                this.getGroups().then(response => {
-                    this.groups = response.data
-                });
-                this.$bvModal.show("manage-role")
+                this.$refs.manageRoleModal.manageRole(role)
             },
             submitDelete(role) {
                 if (!confirm("Are you sure?"))
@@ -113,68 +59,13 @@
                     }
                 })
             },
-            submitEdit() {
-                this.$v.role.$touch();
-                if (this.$v.role.$anyError) {
-                    return;
-                }
-                this.updateRole(this.role).then(response => {
-                    if (response.status === 200) {
-                        this.role = {};
-                        let roleIndex = this.roles.findIndex(role => role.id === response.data.id);
-                        this.roles[roleIndex] = response.data;
-                        this.$refs.rolesTable.refreshTable();
-                        this.$nextTick(() => {
-                            this.$bvModal.hide('edit-role')
-                        });
-                        this.$bvToast.toast(`Role ${response.data.name} updated`, {
-                            title: 'Role updated',
-                            autoHideDelay: 5000,
-                            variant: "dark"
-                        })
-                    } else {
-                        this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
-                            title: 'Error',
-                            autoHideDelay: 5000,
-                            variant: "danger"
-                        })
-                    }
-                })
+            addRoleToTable(role) {
+                this.roles.push(role)
             },
-            submitManage() {
-                let users = this.selectedUsers.map(user => user.id);
-                let groups = this.selectedGroups.map(group => group.id);
-                this.updateRoleMetadata(this.role.id, {"groups": groups, "users": users}).then(response => {
-                    if (response.status === 200) {
-                        this.$nextTick(() => {
-                            this.$bvModal.hide('manage-role')
-                        });
-                        this.$bvToast.toast(`Role ${this.role.name} updated`, {
-                            title: 'Role updated',
-                            autoHideDelay: 5000,
-                            variant: "dark"
-                        });
-                        this.role = {};
-                    } else {
-                        this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
-                            title: 'Error',
-                            autoHideDelay: 5000,
-                            variant: "danger"
-                        })
-                    }
-                })
-            },
-            submitCreate(role) {
-                this.createRole(role).then(response => {
-                    // Push to roles array
-                    this.roles.push(response.data);
-                    // Show notification
-                    this.$bvToast.toast(`Role ${response.data.name} added`, {
-                        title: 'Role added',
-                        autoHideDelay: 5000,
-                        variant: "dark"
-                    })
-                });
+            updateRoleInTable(role) {
+                let roleIndex = this.roles.findIndex(_role => _role.id === role.id);
+                this.roles[roleIndex] = role;
+                this.$refs.rolesTable.refreshTable();
             }
         }
     }

@@ -1,3 +1,4 @@
+from flask_bcrypt import generate_password_hash
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -15,6 +16,9 @@ class Role(db.Model):
     name = db.Column(db.Unicode(100), nullable=False, info={"label": "Name"})
     groups = db.relation("UserGroup", back_populates="role", lazy=True)
     users = db.relation("User", back_populates="role", lazy=True)
+
+    def __init__(self, name):
+        self.name = name
 
     def to_dict(self):
         columns_keys = self.__table__.columns.keys()
@@ -34,6 +38,9 @@ class UserGroup(db.Model):
     )
     role = db.relation("Role", back_populates="groups", lazy=True)
 
+    def __init__(self, name):
+        self.name = name
+
     def to_dict(self):
         columns_keys = self.__table__.columns.keys()
         _group = {key: getattr(self, key) for key in columns_keys}
@@ -43,6 +50,7 @@ class UserGroup(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     login = db.Column(db.Unicode(50), nullable=False, info={"label": "Login"})
+    password = db.Column(db.Unicode(255), nullable=False, info={"label": "Password"})
     first_name = db.Column(
         db.Unicode(50), nullable=False, info={"label": "First name"}
     )
@@ -59,8 +67,9 @@ class User(db.Model):
     )
     role = db.relation("Role", back_populates="users", lazy=True)
 
-    def __init__(self, login, first_name, last_name, birthday, created_at, **kwargs):
+    def __init__(self, login, password, first_name, last_name, birthday, created_at, **kwargs):
         self.login = login
+        self.password = generate_password_hash(password).decode('utf8')
         self.first_name = first_name
         self.last_name = last_name
         self.birthday = birthday
@@ -70,4 +79,5 @@ class User(db.Model):
     def to_dict(self):
         columns_keys = self.__table__.columns.keys()
         _user = {key: getattr(self, key) for key in columns_keys}
+        _user.pop('password')
         return _user

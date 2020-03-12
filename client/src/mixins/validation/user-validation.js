@@ -1,5 +1,5 @@
 import {validationMixin} from "vuelidate";
-import {required, email} from "vuelidate/lib/validators";
+import {email, required, sameAs} from "vuelidate/lib/validators";
 
 export const userValidationMixin = {
     mixins: [validationMixin],
@@ -7,6 +7,12 @@ export const userValidationMixin = {
         user: {
             login: {
                 required
+            },
+            password: {
+                required
+            },
+            repeatPassword: {
+                sameAsPassword: sameAs('password')
             },
             first_name: {
                 required
@@ -30,6 +36,8 @@ export const userValidationMixin = {
         resetUserForm() {
             this.user = {
                 login: null,
+                password: null,
+                repeatPassword: null,
                 first_name: null,
                 last_name: null,
                 birthday: null,

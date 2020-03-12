@@ -9,12 +9,12 @@
             </b-nav-form>
         </b-navbar>
 
-        <b-modal id="new-group" centered title="New Group" @show="resetGroupForm"
+        <b-modal id="new-group" centered title="New Group" @hidden="resetGroupForm"
                  @ok.prevent="submitCreate()">
             <form ref="newGroupForm">
-                <b-form-group :state="nameState" label="Name" label-for="name-input"
+                <b-form-group label="Name" label-for="name-input"
                               invalid-feedback="Name is required">
-                    <b-form-input id="name-input" v-model="group.name" :state="nameState"
+                    <b-form-input id="name-input" v-model="group.name" :state="validateGroupState('name')"
                                   required type="text" name="name"/>
                 </b-form-group>
             </form>
@@ -23,29 +23,24 @@
 </template>
 
 <script>
+    import {groupValidationMixin} from "../mixins/group-validation";
+
     export default {
         name: "GroupsNavbar",
+        mixins: [groupValidationMixin],
         data() {
             return {
                 group: {
                     name: ""
                 },
-                nameState: null,
             }
         },
         methods: {
-            checkFormValidity() {
-                const valid = this.$refs.newGroupForm.checkValidity();
-                this.nameState = valid;
-                return valid
-            },
-            resetGroupForm() {
-                this.group.name = "";
-                this.nameState = null;
-            },
             submitCreate() {
-                if (!this.checkFormValidity())
+                this.$v.group.$touch();
+                if (this.$v.group.$anyError) {
                     return;
+                }
                 this.$emit("submit-create", this.group);
                 this.$nextTick(() => {
                     this.$bvModal.hide('new-group')

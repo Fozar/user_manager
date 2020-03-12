@@ -4,34 +4,35 @@
         <UsersTable v-bind:users="users" @delete-user="submitDelete" @edit-user="editUser" @manage-user="manageUser"
                     ref="usersTable"/>
 
-        <b-modal id="edit-user" centered title="Edit User" @ok.prevent="submitEdit()" @show="resetUserForm">
+        <b-modal id="edit-user" centered title="Edit User" @ok.prevent="submitEdit()" @hidden="resetUserForm">
             <form ref="editUserForm">
-                <b-form-group :state="loginState" label="Login" label-for="login-input"
+                <b-form-group label="Login" label-for="login-input"
                               invalid-feedback="Login is required">
-                    <b-form-input id="login-input" v-model="userToEdit.login" :state="loginState"
+                    <b-form-input id="login-input" v-model="user.login" :state="validateUserState('login')"
                                   required type="text" name="login"/>
                 </b-form-group>
 
-                <b-form-group :state="firstNameState" label="First name" label-for="first-name-input"
+                <b-form-group label="First name" label-for="first-name-input"
                               invalid-feedback="First name is required">
-                    <b-form-input id="first-name-input" v-model="userToEdit.first_name"
-                                  :state="firstNameState" required type="text" name="first_name"/>
+                    <b-form-input id="first-name-input" v-model="user.first_name"
+                                  :state="validateUserState('first_name')" required type="text" name="first_name"/>
                 </b-form-group>
 
-                <b-form-group :state="lastNameState" label="Last name" label-for="last-name-input"
+                <b-form-group label="Last name" label-for="last-name-input"
                               invalid-feedback="Last name is required">
-                    <b-form-input id="last-name-input" v-model="userToEdit.last_name"
-                                  :state="lastNameState" required type="text" name="last_name"/>
+                    <b-form-input id="last-name-input" v-model="user.last_name"
+                                  :state="validateUserState('last_name')" required type="text" name="last_name"/>
                 </b-form-group>
 
-                <b-form-group :state="birthdayState" label="Birthday" label-for="birthday-input"
+                <b-form-group label="Birthday" label-for="birthday-input"
                               invalid-feedback="Birthday is required">
-                    <b-form-input id="birthday-input" v-model="userToEdit.birthday"
-                                  :state="birthdayState" required type="date" name="birthday"/>
+                    <b-form-input id="birthday-input" v-model="user.birthday"
+                                  :state="validateUserState('birthday')" required type="date" name="birthday"/>
                 </b-form-group>
 
                 <b-form-group label="E-mail" label-for="email-input">
-                    <b-form-input id="email-input" v-model="userToEdit.email" type="email" name="email"/>
+                    <b-form-input id="email-input" v-model="user.email" type="email" name="email"
+                                  :state="validateUserState('email')" />
                 </b-form-group>
             </form>
         </b-modal>
@@ -58,19 +59,16 @@
     import {userApiMixin} from "../mixins/user-api";
     import {groupApiMixin} from "../mixins/group-api";
     import {roleApiMixin} from "../mixins/role-api";
+    import {userValidationMixin} from "../mixins/user-validation";
 
     export default {
         name: "Users",
-        mixins: [userApiMixin, groupApiMixin, roleApiMixin],
+        mixins: [userApiMixin, groupApiMixin, roleApiMixin, userValidationMixin],
         data() {
             return {
-                userToEdit: {},
+                user: {},
                 selectedGroups: [],
                 selectedRole: null,
-                loginState: null,
-                firstNameState: null,
-                lastNameState: null,
-                birthdayState: null
             }
         },
         components: {
@@ -83,31 +81,17 @@
             });
         },
         methods: {
-            checkFormValidity() {
-                const valid = this.$refs.editUserForm.checkValidity();
-                this.loginState = valid;
-                this.firstNameState = valid;
-                this.lastNameState = valid;
-                this.birthdayState = valid;
-                return valid
-            },
-            resetUserForm() {
-                this.loginState = null;
-                this.firstNameState = null;
-                this.lastNameState = null;
-                this.birthdayState = null
-            },
             resetManageForm() {
-                this.userToEdit = {}
+                this.user = {}
             },
             editUser(user) {
-                this.userToEdit = {...user};
-                this.userToEdit.birthday = new Date(this.userToEdit.birthday).toISOString().slice(0, 10);
-                this.userToEdit.created_at = new Date(this.userToEdit.created_at).toISOString().slice(0, 19);
+                this.user = {...user};
+                this.user.birthday = new Date(this.user.birthday).toISOString().slice(0, 10);
+                this.user.created_at = new Date(this.user.created_at).toISOString().slice(0, 19);
                 this.$bvModal.show("edit-user")
             },
             manageUser(user) {
-                this.userToEdit = user;
+                this.user = user;
                 this.getUserMetadata(user.id).then(response => {
                     this.selectedGroups = response.data.groups;
                     this.selectedRole = response.data.role
@@ -143,11 +127,13 @@
                 })
             },
             submitEdit() {
-                if (!this.checkFormValidity())
+                this.$v.user.$touch();
+                if (this.$v.user.$anyError) {
                     return;
-                this.updateUser(this.userToEdit).then(response => {
+                }
+                this.updateUser(this.user).then(response => {
                     if (response.status === 200) {
-                        this.userToEdit = {};
+                        this.user = {};
                         let userIndex = this.users.findIndex(user => user.id === response.data.id);
                         this.users[userIndex] = response.data;
                         this.$refs.usersTable.refreshTable();
@@ -173,17 +159,17 @@
                 let role = ((this.selectedRole instanceof Object) ? this.selectedRole.id : null);
                 console.log(groups);
                 console.log(role);
-                this.updateUserMetadata(this.userToEdit.id, {"role": role, "groups": groups}).then(response => {
+                this.updateUserMetadata(this.user.id, {"role": role, "groups": groups}).then(response => {
                     if (response.status === 200) {
                         this.$nextTick(() => {
                             this.$bvModal.hide('manage-user')
                         });
-                        this.$bvToast.toast(`User ${this.userToEdit.login} updated`, {
+                        this.$bvToast.toast(`User ${this.user.login} updated`, {
                             title: 'User updated',
                             autoHideDelay: 5000,
                             variant: "dark"
                         });
-                        this.userToEdit = {};
+                        this.user = {};
                     } else {
                         this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
                             title: 'Error',

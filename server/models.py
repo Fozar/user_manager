@@ -42,11 +42,11 @@ class UserGroup(db.Model):
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    login = db.Column(db.Unicode(100), nullable=False, info={"label": "Login"})
+    login = db.Column(db.Unicode(50), nullable=False, info={"label": "Login"})
     first_name = db.Column(
-        db.Unicode(100), nullable=False, info={"label": "First name"}
+        db.Unicode(50), nullable=False, info={"label": "First name"}
     )
-    last_name = db.Column(db.Unicode(100), nullable=False, info={"label": "Last name"})
+    last_name = db.Column(db.Unicode(50), nullable=False, info={"label": "Last name"})
     birthday = db.Column(db.Date, nullable=False, info={"label": "Birthday"})
     created_at = db.Column(db.DateTime)
     email = db.Column(db.Unicode(255))

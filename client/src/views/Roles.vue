@@ -4,11 +4,10 @@
         <RolesTable v-bind:roles="roles" @delete-role="submitDelete" @edit-role="editRole"
                     @manage-role="manageRole" ref="rolesTable"/>
 
-        <b-modal id="edit-role" centered title="Edit Role" @ok.prevent="submitEdit()" @show="resetRoleForm">
+        <b-modal id="edit-role" centered title="Edit Role" @ok.prevent="submitEdit()" @hidden="resetRoleForm">
             <form ref="editRoleForm">
-                <b-form-group :state="nameState" label="Name" label-for="name-input"
-                              invalid-feedback="Name is required">
-                    <b-form-input id="name-input" v-model="roleToEdit.name" :state="nameState"
+                <b-form-group label="Name" label-for="name-input" invalid-feedback="Name is required">
+                    <b-form-input id="name-input" v-model="role.name" :state="validateRoleState('name')"
                                   required type="text" name="name"/>
                 </b-form-group>
             </form>
@@ -49,16 +48,16 @@
     import RolesTable from "../components/RolesTable";
     import {groupApiMixin} from "../mixins/group-api";
     import {userApiMixin} from "../mixins/user-api";
+    import {roleValidationMixin} from "../mixins/role-validation";
 
     export default {
         name: "Roles",
-        mixins: [roleApiMixin, groupApiMixin, userApiMixin],
+        mixins: [roleApiMixin, groupApiMixin, userApiMixin, roleValidationMixin],
         data() {
             return {
-                roleToEdit: {},
+                role: {},
                 selectedGroups: [],
                 selectedUsers: [],
-                nameState: null,
             }
         },
         components: {
@@ -71,23 +70,15 @@
             });
         },
         methods: {
-            checkFormValidity() {
-                const valid = this.$refs.editRoleForm.checkValidity();
-                this.nameState = valid;
-                return valid
-            },
-            resetRoleForm() {
-                this.nameState = null;
-            },
             resetManageForm() {
-                this.roleToEdit = {}
+                this.role = {}
             },
             editRole(role) {
-                this.roleToEdit = {...role};
+                this.role = {...role};
                 this.$bvModal.show("edit-role")
             },
             manageRole(role) {
-                this.roleToEdit = role;
+                this.role = role;
                 this.getRoleMetadata(role.id).then(response => {
                     this.selectedUsers = response.data.users;
                     this.selectedGroups = response.data.groups
@@ -123,11 +114,13 @@
                 })
             },
             submitEdit() {
-                if (!this.checkFormValidity())
+                this.$v.role.$touch();
+                if (this.$v.role.$anyError) {
                     return;
-                this.updateRole(this.roleToEdit).then(response => {
+                }
+                this.updateRole(this.role).then(response => {
                     if (response.status === 200) {
-                        this.roleToEdit = {};
+                        this.role = {};
                         let roleIndex = this.roles.findIndex(role => role.id === response.data.id);
                         this.roles[roleIndex] = response.data;
                         this.$refs.rolesTable.refreshTable();
@@ -151,17 +144,17 @@
             submitManage() {
                 let users = this.selectedUsers.map(user => user.id);
                 let groups = this.selectedGroups.map(group => group.id);
-                this.updateRoleMetadata(this.roleToEdit.id, {"groups": groups, "users": users}).then(response => {
+                this.updateRoleMetadata(this.role.id, {"groups": groups, "users": users}).then(response => {
                     if (response.status === 200) {
                         this.$nextTick(() => {
                             this.$bvModal.hide('manage-role')
                         });
-                        this.$bvToast.toast(`Role ${this.roleToEdit.name} updated`, {
+                        this.$bvToast.toast(`Role ${this.role.name} updated`, {
                             title: 'Role updated',
                             autoHideDelay: 5000,
                             variant: "dark"
                         });
-                        this.roleToEdit = {};
+                        this.role = {};
                     } else {
                         this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
                             title: 'Error',

@@ -9,12 +9,11 @@
             </b-nav-form>
         </b-navbar>
 
-        <b-modal id="new-role" centered title="New Role" @show="resetRoleForm"
+        <b-modal id="new-role" centered title="New Role" @hidden="resetRoleForm"
                  @ok.prevent="submitCreate()">
             <form ref="newRoleForm">
-                <b-form-group :state="nameState" label="Name" label-for="name-input"
-                              invalid-feedback="Name is required">
-                    <b-form-input id="name-input" v-model="role.name" :state="nameState"
+                <b-form-group label="Name" label-for="name-input" invalid-feedback="Name is required">
+                    <b-form-input id="name-input" v-model="role.name" :state="validateRoleState('name')"
                                   required type="text" name="name"/>
                 </b-form-group>
             </form>
@@ -23,29 +22,24 @@
 </template>
 
 <script>
+    import {roleValidationMixin} from "../mixins/role-validation";
+
     export default {
         name: "RolesNavbar",
+        mixins: [roleValidationMixin],
         data() {
             return {
                 role: {
                     name: ""
                 },
-                nameState: null,
             }
         },
         methods: {
-            checkFormValidity() {
-                const valid = this.$refs.newRoleForm.checkValidity();
-                this.nameState = valid;
-                return valid
-            },
-            resetRoleForm() {
-                this.role.name = "";
-                this.nameState = null;
-            },
             submitCreate() {
-                if (!this.checkFormValidity())
+                this.$v.role.$touch();
+                if (this.$v.role.$anyError) {
                     return;
+                }
                 this.$emit("submit-create", this.role);
                 this.$nextTick(() => {
                     this.$bvModal.hide('new-role')

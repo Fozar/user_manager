@@ -4,11 +4,10 @@
         <GroupsTable v-bind:groups="groups" @delete-group="submitDelete" @edit-group="editGroup"
                      @manage-group="manageGroup" ref="groupsTable"/>
 
-        <b-modal id="edit-group" centered title="Edit Group" @ok.prevent="submitEdit()" @show="resetGroupForm">
+        <b-modal id="edit-group" centered title="Edit Group" @ok.prevent="submitEdit()" @hidden="resetGroupForm">
             <form ref="editGroupForm">
-                <b-form-group :state="nameState" label="Name" label-for="name-input"
-                              invalid-feedback="Name is required">
-                    <b-form-input id="name-input" v-model="groupToEdit.name" :state="nameState"
+                <b-form-group label="Name" label-for="name-input" invalid-feedback="Name is required">
+                    <b-form-input id="name-input" v-model="group.name" :state="validateGroupState('name')"
                                   required type="text" name="name"/>
                 </b-form-group>
             </form>
@@ -42,16 +41,16 @@
     import {groupApiMixin} from "../mixins/group-api";
     import {userApiMixin} from "../mixins/user-api";
     import {roleApiMixin} from "../mixins/role-api";
+    import {groupValidationMixin} from "../mixins/group-validation";
 
     export default {
         name: "Groups",
-        mixins: [groupApiMixin, userApiMixin, roleApiMixin],
+        mixins: [groupApiMixin, userApiMixin, roleApiMixin, groupValidationMixin],
         data() {
             return {
-                groupToEdit: {},
+                group: {},
                 selectedUsers: [],
                 selectedRole: null,
-                nameState: null,
             }
         },
         components: {
@@ -64,23 +63,15 @@
             });
         },
         methods: {
-            checkFormValidity() {
-                const valid = this.$refs.editGroupForm.checkValidity();
-                this.nameState = valid;
-                return valid
-            },
-            resetGroupForm() {
-                this.nameState = null;
-            },
             resetManageForm() {
-                this.groupToEdit = {}
+                this.group = {}
             },
             editGroup(group) {
-                this.groupToEdit = {...group};
+                this.group = {...group};
                 this.$bvModal.show("edit-group")
             },
             manageGroup(group) {
-                this.groupToEdit = group;
+                this.group = group;
                 this.getGroupMetadata(group.id).then(response => {
                     this.selectedUsers = response.data.users;
                     this.selectedRole = response.data.role
@@ -116,11 +107,13 @@
                 })
             },
             submitEdit() {
-                if (!this.checkFormValidity())
+                this.$v.group.$touch();
+                if (this.$v.group.$anyError) {
                     return;
-                this.updateGroup(this.groupToEdit).then(response => {
+                }
+                this.updateGroup(this.group).then(response => {
                     if (response.status === 200) {
-                        this.groupToEdit = {};
+                        this.group = {};
                         let groupIndex = this.groups.findIndex(group => group.id === response.data.id);
                         this.groups[groupIndex] = response.data;
                         this.$refs.groupsTable.refreshTable();
@@ -146,17 +139,17 @@
                 let role = ((this.selectedRole instanceof Object) ? this.selectedRole.id : null);
                 console.log(users);
                 console.log(role);
-                this.updateGroupMetadata(this.groupToEdit.id, {"role": role, "users": users}).then(response => {
+                this.updateGroupMetadata(this.group.id, {"role": role, "users": users}).then(response => {
                     if (response.status === 200) {
                         this.$nextTick(() => {
                             this.$bvModal.hide('manage-group')
                         });
-                        this.$bvToast.toast(`Group ${this.groupToEdit.name} updated`, {
+                        this.$bvToast.toast(`Group ${this.group.name} updated`, {
                             title: 'Group updated',
                             autoHideDelay: 5000,
                             variant: "dark"
                         });
-                        this.groupToEdit = {};
+                        this.group = {};
                     } else {
                         this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
                             title: 'Error',

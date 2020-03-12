@@ -26,8 +26,8 @@
 
                 <b-form-group :state="birthdayState" label="Birthday" label-for="birthday-input"
                               invalid-feedback="Birthday is required">
-                    <b-form-datepicker id="birthday-input" v-model.trim="userToEdit.birthday"
-                                       :state="birthdayState" required type="date" name="birthday"/>
+                    <b-form-input id="birthday-input" v-model="userToEdit.birthday"
+                                  :state="birthdayState" required type="date" name="birthday"/>
                 </b-form-group>
 
                 <b-form-group label="E-mail" label-for="email-input">

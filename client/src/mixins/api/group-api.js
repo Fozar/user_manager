@@ -6,14 +6,14 @@ export const groupApiMixin = {
     },
     methods: {
         getGroups() {
-            return this.axios.get(`http://localhost:5000/groups`).then(response => {
+            return this.axios.get(`/groups`).then(response => {
                 return response
             }).catch((err) => {
                 console.log(err)
             })
         },
         createGroup(group) {
-            return this.axios.post("http://localhost:5000/groups", group, {
+            return this.axios.post("/groups", group, {
                 "withCredentials": true
             }).then(response => {
                 return response
@@ -22,7 +22,7 @@ export const groupApiMixin = {
             });
         },
         getGroup(id) {
-            return this.axios.get(`http://localhost:5000/groups/${id}`).then(response => {
+            return this.axios.get(`/groups/${id}`).then(response => {
                 return response.data
             }).catch((err) => {
                 console.log(err)
@@ -30,7 +30,7 @@ export const groupApiMixin = {
         },
         deleteGroup(group_id) {
             // Delete group in DB
-            return this.axios.delete(`http://localhost:5000/groups/${group_id}`, {
+            return this.axios.delete(`/groups/${group_id}`, {
                 "withCredentials": true
             }).then(response => {
                 return response
@@ -39,7 +39,7 @@ export const groupApiMixin = {
             })
         },
         updateGroup(group) {
-            return this.axios.put(`http://localhost:5000/groups/${group.id}`, group, {
+            return this.axios.put(`/groups/${group.id}`, group, {
                 "withCredentials": true
             }).then(response => {
                 return response
@@ -48,14 +48,14 @@ export const groupApiMixin = {
             });
         },
         getGroupMetadata(group_id) {
-            return this.axios.get(`http://localhost:5000/groups/${group_id}/metadata`).then(response => {
+            return this.axios.get(`/groups/${group_id}/metadata`).then(response => {
                 return response
             }).catch((err) => {
                 console.log(err)
             })
         },
         updateGroupMetadata(group_id, metadata) {
-            return this.axios.put(`http://localhost:5000/groups/${group_id}/metadata`, metadata).then(response => {
+            return this.axios.put(`/groups/${group_id}/metadata`, metadata).then(response => {
                 return response
             }).catch((err) => {
                 console.log(err)

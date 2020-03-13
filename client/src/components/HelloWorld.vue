@@ -1,9 +1,13 @@
 <template>
-    <div class="hello text-center pt-5 w-50 m-auto">
-        <h1><font-awesome-icon size="5x" icon="user" /><br>Welcome to User Manager Prototype</h1>
+    <div>
+        <h1>
+            <font-awesome-icon size="5x" icon="user"/>
+            <br>Welcome to User Manager Prototype
+        </h1>
         <p>
             Designed by Alexandr Timoshenko specifically for Digital Ecosystems as a test task for employment.
         </p>
+        <p><strong>WARNING:<br>Don't forget to change the axios.defaults.baseURL in main.js to API url!</strong></p>
         <h3>Frontend Technologies Stack</h3>
         <ul>
             <li>JavaScript</li>
@@ -29,6 +33,7 @@
             <li>Flask-SQLAlchemy</li>
             <li>Flask-WTF</li>
             <li>Flask-Bcrypt</li>
+            <li>Flask-JWT-Extended</li>
         </ul>
     </div>
 </template>

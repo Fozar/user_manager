@@ -1,15 +1,38 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required
 from flask_restful import Resource, abort
 
 from forms import UserForm, UserGroupForm, RoleForm
 from models import User, db, UserGroup, Role
 
 
+class LoginApi(Resource):
+    def post(self):
+        body = request.get_json()
+        user = User.query.filter_by(login=body.get("login")).first()
+        if not user:
+            response = jsonify({"error": "Login invalid", 'authenticated': False})
+            response.status_code = 401
+            return response
+        auth = user.check_password(body.get("password"))
+        if not auth:
+            response = jsonify({"error": "Password invalid", 'authenticated': False})
+            response.status_code = 401
+            return response
+
+        access_token = create_access_token(
+            identity=str(user.id), expires_delta=timedelta(days=1)
+        )
+        response = jsonify({"user": user.to_dict(), "token": access_token})
+        response.status_code = 200
+        return response
+
+
 class Users(Resource):
-    @staticmethod
-    def get(user_id):
+    @jwt_required
+    def get(self, user_id):
         user = User.query.filter_by(id=int(user_id)).first()
         if not user:
             abort(404)
@@ -17,8 +40,8 @@ class Users(Resource):
         response.status_code = 200
         return response
 
-    @staticmethod
-    def delete(user_id):
+    @jwt_required
+    def delete(self, user_id):
         user = User.query.filter_by(id=int(user_id))
         if not user:
             abort(404)
@@ -28,18 +51,19 @@ class Users(Resource):
         db.session.commit()
         return 200
 
-    @staticmethod
-    def put(user_id):
+    @jwt_required
+    def put(self, user_id):
         user = User.query.filter_by(id=int(user_id)).first()
         if not user:
             abort(404)
-        form = UserForm(data=request.get_json())
+        form = UserForm.from_json(request.get_json(), obj=user)
         if not form.validate():
             abort(400)
         columns_keys = User.__table__.columns.keys()
         for field in columns_keys:
             if field in form.data:
                 setattr(user, field, form.data[field])
+        user.hash_password()
         db.session.commit()
         response = jsonify(user.to_dict())
         response.status_code = 200
@@ -47,18 +71,20 @@ class Users(Resource):
 
 
 class UsersList(Resource):
-    @staticmethod
-    def get():
+    @jwt_required
+    def get(self):
         users = [user.to_dict() for user in User.query.all()]
         response = jsonify(users)
         response.status_code = 200
         return response
 
-    @staticmethod
-    def post():
+    @jwt_required
+    def post(self):
         form = UserForm(data=request.get_json())
         if not form.validate():
-            abort(400)
+            response = jsonify(form.errors)
+            response.status_code = 400
+            return response
         user = User(**form.data)
         user.created_at = datetime.utcnow()
         db.session.add(user)
@@ -70,8 +96,8 @@ class UsersList(Resource):
 
 
 class Roles(Resource):
-    @staticmethod
-    def get(role_id):
+    @jwt_required
+    def get(self, role_id):
         role = Role.query.filter_by(id=int(role_id)).first()
         if not role:
             abort(404)
@@ -79,8 +105,8 @@ class Roles(Resource):
         response.status_code = 200
         return response
 
-    @staticmethod
-    def delete(role_id):
+    @jwt_required
+    def delete(self, role_id):
         role = Role.query.filter_by(id=int(role_id))
         if not role:
             abort(404)
@@ -91,8 +117,8 @@ class Roles(Resource):
         db.session.commit()
         return 200
 
-    @staticmethod
-    def put(role_id):
+    @jwt_required
+    def put(self, role_id):
         role = Role.query.filter_by(id=int(role_id)).first()
         if not role:
             abort(404)
@@ -110,15 +136,15 @@ class Roles(Resource):
 
 
 class RolesList(Resource):
-    @staticmethod
-    def get():
+    @jwt_required
+    def get(self):
         roles = [role.to_dict() for role in Role.query.all()]
         response = jsonify(roles)
         response.status_code = 200
         return response
 
-    @staticmethod
-    def post():
+    @jwt_required
+    def post(self):
         form = RoleForm(data=request.get_json())
         if not form.validate():
             abort(400)
@@ -132,8 +158,8 @@ class RolesList(Resource):
 
 
 class Groups(Resource):
-    @staticmethod
-    def get(group_id):
+    @jwt_required
+    def get(self, group_id):
         group = UserGroup.query.filter_by(id=int(group_id)).first()
         if not group:
             abort(404)
@@ -141,8 +167,8 @@ class Groups(Resource):
         response.status_code = 200
         return response
 
-    @staticmethod
-    def delete(group_id):
+    @jwt_required
+    def delete(self, group_id):
         group = UserGroup.query.filter_by(id=int(group_id))
         if not group:
             abort(404)
@@ -152,8 +178,8 @@ class Groups(Resource):
         db.session.commit()
         return 200
 
-    @staticmethod
-    def put(group_id):
+    @jwt_required
+    def put(self, group_id):
         group = UserGroup.query.filter_by(id=int(group_id)).first()
         if not group:
             abort(404)
@@ -171,15 +197,15 @@ class Groups(Resource):
 
 
 class GroupsList(Resource):
-    @staticmethod
-    def get():
+    @jwt_required
+    def get(self):
         groups = [group.to_dict() for group in UserGroup.query.all()]
         response = jsonify(groups)
         response.status_code = 200
         return response
 
-    @staticmethod
-    def post():
+    @jwt_required
+    def post(self):
         form = UserGroupForm(data=request.get_json())
         if not form.validate():
             abort(400)
@@ -193,8 +219,8 @@ class GroupsList(Resource):
 
 
 class UsersMetadata(Resource):
-    @staticmethod
-    def get(user_id):
+    @jwt_required
+    def get(self, user_id):
         user = User.query.filter_by(id=int(user_id)).first()
         if not user:
             abort(404)
@@ -204,20 +230,20 @@ class UsersMetadata(Resource):
         response.status_code = 200
         return response
 
-    @staticmethod
-    def put(user_id):
+    @jwt_required
+    def put(self, user_id):
         user = User.query.filter_by(id=int(user_id)).first()
         if not user:
             abort(404)
-        data = request.get_json()
-        role_id = data["role"]
+        body = request.get_json()
+        role_id = body.get("role")
         if role_id is not None:
             role = Role.query.filter_by(id=int(role_id)).first()
             if not role:
                 abort(404)
         else:
             role = None
-        group_ids = data["groups"]
+        group_ids = body.get("groups")
         groups = db.session.query(UserGroup).filter(UserGroup.id.in_(group_ids)).all()
         if len(groups) < len(group_ids):
             abort(404)
@@ -228,8 +254,8 @@ class UsersMetadata(Resource):
 
 
 class GroupsMetadata(Resource):
-    @staticmethod
-    def get(group_id):
+    @jwt_required
+    def get(self, group_id):
         group = UserGroup.query.filter_by(id=int(group_id)).first()
         if not group:
             abort(404)
@@ -239,20 +265,20 @@ class GroupsMetadata(Resource):
         response.status_code = 200
         return response
 
-    @staticmethod
-    def put(group_id):
+    @jwt_required
+    def put(self, group_id):
         group = UserGroup.query.filter_by(id=int(group_id)).first()
         if not group:
             abort(404)
-        data = request.get_json()
-        role_id = data["role"]
+        body = request.get_json()
+        role_id = body.get("role")
         if role_id is not None:
             role = Role.query.filter_by(id=int(role_id)).first()
             if not role:
                 abort(404)
         else:
             role = None
-        user_ids = data["users"]
+        user_ids = body.get("users")
         users = db.session.query(User).filter(User.id.in_(user_ids)).all()
         if len(users) < len(user_ids):
             abort(404)
@@ -263,8 +289,8 @@ class GroupsMetadata(Resource):
 
 
 class RolesMetadata(Resource):
-    @staticmethod
-    def get(role_id):
+    @jwt_required
+    def get(self, role_id):
         role = Role.query.filter_by(id=int(role_id)).first()
         if not role:
             abort(404)
@@ -274,17 +300,17 @@ class RolesMetadata(Resource):
         response.status_code = 200
         return response
 
-    @staticmethod
-    def put(role_id):
+    @jwt_required
+    def put(self, role_id):
         role = Role.query.filter_by(id=int(role_id)).first()
         if not role:
             abort(404)
-        data = request.get_json()
-        user_ids = data["users"]
+        body = request.get_json()
+        user_ids = body.get("users")
         users = db.session.query(User).filter(User.id.in_(user_ids)).all()
         if len(users) < len(user_ids):
             abort(404)
-        group_ids = data["groups"]
+        group_ids = body.get("groups")
         groups = db.session.query(UserGroup).filter(UserGroup.id.in_(group_ids)).all()
         if len(groups) < len(group_ids):
             abort(404)

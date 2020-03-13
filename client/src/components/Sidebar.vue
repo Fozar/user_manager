@@ -3,20 +3,29 @@
         <ul class="sidebar-nav">
             <li class="sidebar-brand">
                 <router-link tag="a" active-class="selected" to="/" exact>
-                    <font-awesome-icon icon="user" /> User Manager
+                    <font-awesome-icon icon="user"/>
+                    User Manager
                 </router-link>
             </li>
-            <li>
+            <li class="sidebar-brand">
+                <router-link active-class="selected" exact tag="a" to="/auth" v-if="!loggedIn">
+                    Log In
+                </router-link>
+                <b-link @click="logOut" v-else>
+                    Log Out
+                </b-link>
+            </li>
+            <li v-if="loggedIn">
                 <router-link tag="a" active-class="selected" to="/users" exact>
                     Users
                 </router-link>
             </li>
-            <li>
+            <li v-if="loggedIn">
                 <router-link tag="a" active-class="selected" to="/groups" exact>
                     User Groups
                 </router-link>
             </li>
-            <li>
+            <li v-if="loggedIn">
                 <router-link tag="a" active-class="selected" to="/roles" exact>
                     User Roles
                 </router-link>
@@ -28,6 +37,21 @@
 <script>
     export default {
         name: "Sidebar",
+        data() {
+            return {
+                get loggedIn() {
+                    return localStorage.getItem('jwt') != null;
+                }
+            }
+        },
+        methods: {
+            logOut() {
+                localStorage.removeItem('user');
+                localStorage.removeItem('jwt');
+                this.$router.push('auth')
+                location.reload();
+            }
+        }
     }
 </script>
 

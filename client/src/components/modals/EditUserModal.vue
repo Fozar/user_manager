@@ -70,24 +70,22 @@
                     return;
                 }
                 this.updateUser(this.user).then(response => {
-                    if (response.status === 200) {
-                        this.$emit('update-user-in-table', response.data);
-                        this.$nextTick(() => {
-                            this.$bvModal.hide('edit-user')
-                        });
-                        this.$bvToast.toast(`User ${response.data.login} updated`, {
-                            title: 'User updated',
-                            autoHideDelay: 5000,
-                            variant: "dark"
-                        })
-                    } else {
-                        this.$bvToast.toast(`Something went wrong. Error code: ${response.status}`, {
-                            title: 'Error',
-                            autoHideDelay: 5000,
-                            variant: "danger"
-                        })
-                    }
-                })
+                    this.$emit('update-user-in-table', response.data);
+                    this.$nextTick(() => {
+                        this.$bvModal.hide('edit-user')
+                    });
+                    this.$bvToast.toast(`User ${response.data.login} updated`, {
+                        title: 'User updated',
+                        autoHideDelay: 5000,
+                        variant: "dark"
+                    })
+                }).catch((err) => {
+                    this.$bvToast.toast(`Something went wrong.`, {
+                        title: `Error code: ${err.response.status}`,
+                        autoHideDelay: 5000,
+                        variant: "danger"
+                    })
+                });
             },
         }
     }

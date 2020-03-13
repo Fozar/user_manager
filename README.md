@@ -27,6 +27,7 @@
     <li>Flask-SQLAlchemy</li>
     <li>Flask-WTF</li>
     <li>Flask-Bcrypt</li>
+    <li>Flask-JWT-Extended</li>
 </ul>
 
 # client
@@ -54,7 +55,8 @@ npm run lint
 ```
 
 ### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+Change the **axios.defaults.baseURL** in main.js to API url!<br>
+Also see [Configuration Reference](https://cli.vuejs.org/config/).
 
 # server
 ```
@@ -90,9 +92,9 @@ pip3 install -r requirements.txt
 ### Run server
 ##### Windows:
 ```
-python app.py
+python -m flask run app.py --host 0.0.0.0
 ```
 ##### Linux:
 ```
-python3 app.py
+python3 -m flask run app.py --host 0.0.0.0
 ```

@@ -6,14 +6,14 @@ export const roleApiMixin = {
     },
     methods: {
         getRoles() {
-            return this.axios.get(`http://localhost:5000/roles`).then(response => {
+            return this.axios.get(`/roles`).then(response => {
                 return response
             }).catch((err) => {
                 console.log(err)
             })
         },
         createRole(role) {
-            return this.axios.post("http://localhost:5000/roles", role, {
+            return this.axios.post("/roles", role, {
                 "withCredentials": true
             }).then(response => {
                 return response
@@ -22,7 +22,7 @@ export const roleApiMixin = {
             });
         },
         getRole(role_id) {
-            return this.axios.get(`http://localhost:5000/roles/${role_id}`).then(response => {
+            return this.axios.get(`/roles/${role_id}`).then(response => {
                 return response.data
             }).catch((err) => {
                 console.log(err)
@@ -30,7 +30,7 @@ export const roleApiMixin = {
         },
         deleteRole(role_id) {
             // Delete role in DB
-            return this.axios.delete(`http://localhost:5000/roles/${role_id}`, {
+            return this.axios.delete(`/roles/${role_id}`, {
                 "withCredentials": true
             }).then(response => {
                 return response
@@ -39,7 +39,7 @@ export const roleApiMixin = {
             })
         },
         updateRole(role) {
-            return this.axios.put(`http://localhost:5000/roles/${role.id}`, role, {
+            return this.axios.put(`/roles/${role.id}`, role, {
                 "withCredentials": true
             }).then(response => {
                 return response
@@ -48,14 +48,14 @@ export const roleApiMixin = {
             });
         },
         getRoleMetadata(role_id) {
-            return this.axios.get(`http://localhost:5000/roles/${role_id}/metadata`).then(response => {
+            return this.axios.get(`/roles/${role_id}/metadata`).then(response => {
                 return response
             }).catch((err) => {
                 console.log(err)
             })
         },
         updateRoleMetadata(role_id, metadata) {
-            return this.axios.put(`http://localhost:5000/roles/${role_id}/metadata`, metadata).then(response => {
+            return this.axios.put(`/roles/${role_id}/metadata`, metadata).then(response => {
                 return response
             }).catch((err) => {
                 console.log(err)

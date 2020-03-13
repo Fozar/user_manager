@@ -79,10 +79,24 @@
                         title: 'User created',
                         autoHideDelay: 5000,
                         variant: "dark"
+                    });
+                    this.$nextTick(() => {
+                        this.$bvModal.hide('new-user')
                     })
-                });
-                this.$nextTick(() => {
-                    this.$bvModal.hide('new-user')
+                }).catch(err => {
+                    if (err.response.status === 400) {
+                        let errors = "";
+                        for (let [field, error] of Object.entries(err.response.data)) {
+                            field = field[0].toUpperCase() + field.slice(1);
+                            errors += `${field}: ${error} `
+                        }
+                        this.$bvToast.toast(`Something went wrong. ${errors}`, {
+                            title: `Error code: ${err.response.status}`,
+                            autoHideDelay: 5000,
+                            variant: "danger"
+                        })
+                    }
+                    console.log(err)
                 });
             }
         }
